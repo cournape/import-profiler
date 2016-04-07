@@ -77,62 +77,81 @@ def compute_intime(parent, full_stack, ordered_visited, visited, depth=0):
     visited[parent].append(intime)
 
 
-def print_info(import_stack):
-    full_stack = import_stack._full_stack
+class ImportProfilerContext(object):
+    def __init__(self):
+        self._original_importer = __builtins__["__import__"]
+        self._import_stack = ImportStack()
 
-    keys = sorted(full_stack.keys(), key=lambda p: p._counter)
-    visited = {}
-    ordered_visited = []
+    def enable(self):
+        __builtins__["__import__"] = self._profiled_import
 
-    for key in keys:
-        compute_intime(key, full_stack, ordered_visited, visited)
+    def disable(self):
+        __builtins__["__import__"] = self._original_importer
 
-    lines = []
-    for k in ordered_visited:
-        node = visited[k]
-        cumtime = node[0] * 1000
-        name = node[1]
-        context_name = node[2]
-        level = node[3]
-        intime = node[-1] * 1000
-        if cumtime > 1:
-            lines.append((
-                "{:.1f}".format(cumtime),
-                "{:.1f}".format(intime),
-                "+" * level + name,
-            ))
+    def print_info(self, threshold=1.):
+        """ Print profiler results.
 
-    import tabulate
+        Parameters
+        ----------
+        threshold : float
+            import statements taking less than threshold (in ms) will not be
+            displayed.
+        """
+        full_stack = self._import_stack._full_stack
 
-    print(
-        tabulate.tabulate(
-            lines, headers=("cumtime (ms)", "intime (ms)", "name"), tablefmt="plain")
-    )
+        keys = sorted(full_stack.keys(), key=lambda p: p._counter)
+        visited = {}
+        ordered_visited = []
 
-_IMPORT_STACK = ImportStack()
+        for key in keys:
+            compute_intime(key, full_stack, ordered_visited, visited)
+
+        lines = []
+        for k in ordered_visited:
+            node = visited[k]
+            cumtime = node[0] * 1000
+            name = node[1]
+            context_name = node[2]
+            level = node[3]
+            intime = node[-1] * 1000
+            if cumtime > 1:
+                lines.append((
+                    "{:.1f}".format(cumtime),
+                    "{:.1f}".format(intime),
+                    "+" * level + name,
+                ))
+
+        # Import here to avoid messing with the profile
+        import tabulate
+
+        print(
+            tabulate.tabulate(
+                lines, headers=("cumtime (ms)", "intime (ms)", "name"), tablefmt="plain")
+        )
+
+    # Protocol implementations
+    def __enter__(self):
+        self.enable()
+        return self
+
+    def __exit__(self, *a, **kw):
+        self.disable()
+
+    def _profiled_import(self, name, globals=None, locals=None, fromlist=None,
+                         level=-1, *a, **kw):
+        if globals is None:
+            context_name = None
+        else:
+            context_name = globals.get("__name__")
+            if context_name is None:
+                context_name = globals.get("__file__")
+
+        info = self._import_stack.push(name, context_name)
+        try:
+            return self._original_importer(name, globals, locals, fromlist, level, *a, **kw)
+        finally:
+            self._import_stack.pop(info)
 
 
-def profiled_import(name, globals=None, locals=None, fromlist=None,
-                    level=-1, *a, **kw):
-    if globals is None:
-        context_name = None
-    else:
-        context_name = globals.get("__name__")
-        if context_name is None:
-            context_name = globals.get("__file__")
-
-    info = _IMPORT_STACK.push(name, context_name)
-    try:
-        return __OLD_IMPORT(name, globals, locals, fromlist, level, *a, **kw)
-    finally:
-        _IMPORT_STACK.pop(info)
-
-
-def enable():
-    global __OLD_IMPORT
-    __OLD_IMPORT = __builtins__["__import__"]
-    __builtins__["__import__"] = profiled_import
-
-
-def disable():
-    __builtins__["__import__"] = __OLD_IMPORT
+def profile_import():
+    return ImportProfilerContext()
