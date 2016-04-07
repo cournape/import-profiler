@@ -97,8 +97,8 @@ def print_info(import_stack):
         intime = node[-1] * 1000
         if cumtime > 1:
             lines.append((
-                "{:.2}".format(cumtime),
-                "{:.2}".format(intime),
+                "{:.1f}".format(cumtime),
+                "{:.1f}".format(intime),
                 "+" * level + name,
             ))
 
@@ -106,7 +106,7 @@ def print_info(import_stack):
 
     print(
         tabulate.tabulate(
-            lines, headers=("cumtime", "intime", "name"), tablefmt="plain")
+            lines, headers=("cumtime (ms)", "intime (ms)", "name"), tablefmt="plain")
     )
 
 _IMPORT_STACK = ImportStack()
