@@ -1,8 +1,4 @@
-import collections
 import time
-
-
-__OLD_IMPORT = None
 
 
 class ImportInfo(object):
@@ -40,7 +36,7 @@ class ImportInfo(object):
 class ImportStack(object):
     def __init__(self):
         self._current_stack = []
-        self._full_stack = collections.defaultdict(list)
+        self._full_stack = {}
         self._counter = 0
 
     def push(self, name, context_name):
@@ -49,6 +45,8 @@ class ImportStack(object):
 
         if len(self._current_stack) > 0:
             parent = self._current_stack[-1]
+            if parent not in self._full_stack:
+                self._full_stack[parent] = []
             self._full_stack[parent].append(info)
         self._current_stack.append(info)
 
@@ -70,7 +68,7 @@ def compute_intime(parent, full_stack, ordered_visited, visited, depth=0):
     visited[parent] = [cumtime, parent.name, parent.context_name, depth]
     ordered_visited.append(parent)
 
-    for child in full_stack[parent]:
+    for child in full_stack.get(parent, []):
         intime -= child.elapsed
         compute_intime(child, full_stack, ordered_visited, visited, depth + 1)
 
