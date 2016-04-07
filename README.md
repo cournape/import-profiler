@@ -11,7 +11,7 @@ This is Work in Progress. To try it out, write something as follows:
 ``` python
 from import_profiler import profile_import
 
-with profile_import as context:
+with profile_import() as context:
     # Anything expensive in here
     import requests
 
