@@ -8,7 +8,7 @@ with open("README.md", "rt") as fp:
 if __name__ == "__main__":
     setup(
         name="import-profiler",
-        version="0.0.1.dev0",
+        version="0.0.1",
         author="David Cournapeau",
         author_email="cournape@gmail.com",
         license="MIT",
