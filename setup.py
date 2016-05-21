@@ -15,4 +15,5 @@ if __name__ == "__main__":
         install_requires=["tabulate >= 0.7.5"],
         description="Import profiler to find bottlenecks in import times.",
         long_description=DESCRIPTION,
+        py_modules=["import_profiler"],
     )
