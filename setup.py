@@ -12,7 +12,7 @@ if __name__ == "__main__":
         author="David Cournapeau",
         author_email="cournape@gmail.com",
         license="MIT",
-        install_requires=["tabulate >= 0.7.5"],
+        install_requires=["attrs >= 17.1.0", "tabulate >= 0.7.5"],
         description="Import profiler to find bottlenecks in import times.",
         long_description=DESCRIPTION,
         py_modules=["import_profiler"],

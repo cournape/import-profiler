@@ -1,42 +1,23 @@
+import operator
 import time
 
+from attr import attr, attributes, Factory
 
+
+@attributes(frozen=True)
 class ImportInfo(object):
-    def __init__(self, name, context_name, counter):
-        self.name = name
-        self.context_name = context_name
-        self._counter = counter
-        self._depth = 0
-        self._start = time.time()
+    name = attr()
+    context_name = attr()
 
-        self.elapsed = None
-
-    def done(self):
-        self.elapsed = time.time() - self._start
-
-    @property
-    def _key(self):
-        return self.name, self.context_name, self._counter
-
-    def __repr__(self):
-        return "ImportInfo({!r}, {!r}, {!r})".format(*self._key)
-
-    def __hash__(self):
-        return hash(self._key)
-
-    def __eq__(self, other):
-        if isinstance(other, ImportInfo):
-            return other._key == self._key
-        return NotImplemented
-
-    def __ne__(self):
-        return not self == other
+    counter = attr()
+    start = attr(default=Factory(time.time))
 
 
 class ImportStack(object):
     def __init__(self):
         self._current_stack = []
         self._full_stack = {}
+        self._elapsed = {}  # ImportInfo instances -> elapsed times
         self._counter = 0
 
     def push(self, name, context_name):
@@ -50,27 +31,25 @@ class ImportStack(object):
             self._full_stack[parent].append(info)
         self._current_stack.append(info)
 
-        info._depth = len(self._current_stack) - 1
-
         return info
 
     def pop(self, import_info):
         top = self._current_stack.pop()
         assert top is import_info
-        top.done()
+        self._elapsed[top] = time.time() - top.start
 
 
-def compute_intime(parent, full_stack, ordered_visited, visited, depth=0):
+def compute_intime(parent, full_stack, elapsed, ordered_visited, visited, depth=0):
     if parent in visited:
         return
 
-    cumtime = intime = parent.elapsed
+    cumtime = intime = elapsed[parent]
     visited[parent] = [cumtime, parent.name, parent.context_name, depth]
     ordered_visited.append(parent)
 
     for child in full_stack.get(parent, []):
-        intime -= child.elapsed
-        compute_intime(child, full_stack, ordered_visited, visited, depth + 1)
+        intime -= elapsed[child]
+        compute_intime(child, full_stack, elapsed, ordered_visited, visited, depth + 1)
 
     visited[parent].append(intime)
 
@@ -96,13 +75,14 @@ class ImportProfilerContext(object):
             displayed.
         """
         full_stack = self._import_stack._full_stack
+        elapsed = self._import_stack._elapsed
 
-        keys = sorted(full_stack.keys(), key=lambda p: p._counter)
+        keys = sorted(full_stack.keys(), key=operator.attrgetter("counter"))
         visited = {}
         ordered_visited = []
 
         for key in keys:
-            compute_intime(key, full_stack, ordered_visited, visited)
+            compute_intime(key, full_stack, elapsed, ordered_visited, visited)
 
         lines = []
         for k in ordered_visited:
