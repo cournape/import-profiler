@@ -92,7 +92,7 @@ class ImportProfilerContext(object):
             context_name = node[2]
             level = node[3]
             intime = node[-1] * 1000
-            if cumtime > 1:
+            if cumtime >= threshold:
                 lines.append((
                     "{:.1f}".format(cumtime),
                     "{:.1f}".format(intime),
