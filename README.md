@@ -4,6 +4,9 @@ often a problem, imports can be an issue for applications that need to start
 quickly, such as CLI tools. The goal of import profiler is to help find the
 bottlenecks when importing a given package.
 
+Note: starting from python 3.7, the option `-X importtime` can be used for similar
+use, and with a better accuracy. See python/cpython#3490
+
 ## Example
 
 This is Work in Progress. To try it out, write something as follows:
